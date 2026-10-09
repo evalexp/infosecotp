@@ -15,6 +15,10 @@
 
 ## 作为库引用
 
+```sh
+go get github.com/evalexp/infosecotp@v0.1.0
+```
+
 ```go
 import "github.com/evalexp/infosecotp/otp"
 
