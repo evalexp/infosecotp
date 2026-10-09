@@ -1,0 +1,57 @@
+name: Release
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  releases-matrix:
+    name: Release Go Binary
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, windows, darwin]
+        goarch: ["386", amd64, arm, arm64]
+        exclude:
+          - goarch: "386"
+            goos: darwin
+          - goarch: arm
+            goos: darwin
+          - goarch: arm
+            goos: windows
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Test
+        run: go test ./...
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: >
+          go build -trimpath -ldflags "-s -w"
+          -o "infosecotp_${GOOS}_${GOARCH}${{ matrix.goos == 'windows' && '.exe' || '' }}"
+          ./cmd/infosecotp
+
+      - name: Package
+        run: |
+          asset="infosecotp_${{ matrix.goos }}_${{ matrix.goarch }}"
+          binary="${asset}${{ matrix.goos == 'windows' && '.exe' || '' }}"
+          tar -czf "${asset}.tar.gz" "${binary}"
+          zip "${asset}.zip" "${binary}"
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            infosecotp_${{ matrix.goos }}_${{ matrix.goarch }}.tar.gz
+            infosecotp_${{ matrix.goos }}_${{ matrix.goarch }}.zip
