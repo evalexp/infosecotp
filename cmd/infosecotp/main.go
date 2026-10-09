@@ -39,22 +39,31 @@ func main() {
 // runParse 解析二维码图片并生成 OTP。
 func runParse(args []string) error {
 	fs := flag.NewFlagSet("parse", flag.ContinueOnError)
-	imageFlag := fs.String("image", "", "二维码图片路径（PNG/JPEG/GIF）")
+	imageFlag := fs.String("image", "", "二维码图片路径（PNG/JPEG/GIF），与 --string 互斥")
+	stringFlag := fs.String("string", "", "二维码内容字符串（sn|username|randomNumber|userSeed），与 --image 互斥")
 	localKey := fs.String("local-key", "", "本地密钥（Base64），缺省使用内置默认密钥")
 	timeFlag := fs.Int64("time", 0, "时间戳（毫秒，0 = 当前机器时间）")
 	verbose := fs.Bool("verbose", false, "打印中间值（SM4 密钥、种子碎片、OTP 种子等）")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	if *imageFlag == "" {
-		return errors.New("请提供 --image <path>")
+	switch {
+	case *imageFlag != "" && *stringFlag != "":
+		return errors.New("--image 与 --string 互斥，只能提供一个")
+	case *imageFlag == "" && *stringFlag == "":
+		return errors.New("请提供 --image <path> 或 --string <qrContent>")
 	}
 	forge, err := newForge(*localKey)
 	if err != nil {
 		return err
 	}
 	tsMs := resolveTime(*timeFlag)
-	result, err := forge.ForgeFromImage(*imageFlag, tsMs)
+	var result *otp.Result
+	if *imageFlag != "" {
+		result, err = forge.ForgeFromImage(*imageFlag, tsMs)
+	} else {
+		result, err = forge.ForgeFromQR(*stringFlag, tsMs)
+	}
 	if err != nil {
 		return err
 	}
@@ -127,6 +136,7 @@ func printUsage() {
 
 用法:
   infosecotp parse --image <qr.png> [选项]                            解析二维码图片并生成 OTP
+  infosecotp parse --string <sn|user|rand|seedB64> [选项]             用二维码内容字符串生成 OTP
   infosecotp gen --rand <randomNumber> --seed <userSeed-b64> [选项]   由已知字段直接生成 OTP
 
 选项:
@@ -136,6 +146,7 @@ func printUsage() {
 
 示例:
   infosecotp parse --image ./qr.png
+  infosecotp parse --string "sn001|user01|1234567890|<userSeed-b64>"
   infosecotp gen --rand 1234567890 --seed aGVsbG8= --time 1600000000000
 `)
 }

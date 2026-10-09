@@ -37,20 +37,25 @@ res, err = otp.ForgeFromParts("sn", "user", "rand", "userSeedB64", tsMs)
 
 ```
 infosecotp parse --image <qr.png> [选项]                          解析二维码图片 → OTP
+infosecotp parse --string <qrContent> [选项]                       用二维码内容字符串 → OTP（与 --image 互斥）
 infosecotp gen --rand <randomNumber> --seed <userSeed-b64> [选项]  由已知字段直接生成 OTP
 
 选项:
+  --image <path>     二维码图片路径（PNG/JPEG/GIF），与 --string 互斥
+  --string <content> 二维码内容字符串（sn|username|randomNumber|userSeed），与 --image 互斥
   --time <毫秒>      时间戳，缺省为当前机器时间
   --local-key <b64>  本地密钥（Base64），缺省使用内置默认密钥
   --verbose          打印中间值（SM4 密钥、种子碎片、OTP 种子等）
 ```
 
+- `--image` 与 `--string` 互斥，二者必须提供其一（`parse` 命令）。
 - `--time` 指定时间戳（毫秒），缺省为当前机器时间。
 - `--local-key` 指定本地密钥（Base64），缺省使用内置默认密钥。
 - `--verbose` 打印中间值（SM4 密钥、种子碎片、OTP 种子），便于排查。
 
 ```sh
 go run ./cmd/infosecotp parse --image ./qr.png
+go run ./cmd/infosecotp parse --string "sn001|user01|1234567890|<userSeedB64>"
 go run ./cmd/infosecotp gen --rand 1234567890 --seed <b64> --time 1600000000000 --local-key <b64> --verbose
 ```
 
